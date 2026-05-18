@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="MangaTranslate">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#4F46E5" />
+      <stop offset="100%" stop-color="#06B6D4" />
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="56" height="56" rx="14" fill="url(#bg)" />
+  <path d="M18 22h28v4H18zm0 8h18v4H18zm0 8h28v4H18z" fill="#fff" />
+  <circle cx="44" cy="44" r="8" fill="#fff" opacity="0.9" />
+  <path d="M40 44h8" stroke="#4F46E5" stroke-width="2" stroke-linecap="round" />
+  <path d="M44 40v8" stroke="#4F46E5" stroke-width="2" stroke-linecap="round" />
+</svg>

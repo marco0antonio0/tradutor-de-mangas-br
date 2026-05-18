@@ -1,0 +1,32 @@
+services:
+  nextjs:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: manga-nextjs
+    ports:
+      - "3080:3080"
+    environment:
+      MODEL_API_BASE_URL: "http://python-api:8023"
+      NODE_ENV: "production"
+    depends_on:
+      python-api:
+        condition: service_healthy
+    volumes:
+      - ./storage:/app/storage
+    restart: unless-stopped
+
+  python-api:
+    build:
+      context: ./python-api
+      dockerfile: Dockerfile
+    container_name: manga-python-api
+    expose:
+      - "8023"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8023/health').read()"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped

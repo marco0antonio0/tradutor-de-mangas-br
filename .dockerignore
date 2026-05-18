@@ -1,0 +1,12 @@
+.git
+.gitignore
+.next
+node_modules
+storage
+python-api/.venv
+python-api/__pycache__
+python-api/**/__pycache__
+python-api/.pytest_cache
+python-api/.mypy_cache
+python-api/.ruff_cache
+*.log

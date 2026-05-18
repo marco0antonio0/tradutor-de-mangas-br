@@ -1,0 +1,15 @@
+fastapi>=0.111.0
+uvicorn[standard]>=0.30.0
+python-multipart>=0.0.9
+numpy>=1.24.0,<2.0.0
+opencv-python>=4.8.0,<4.12.0
+pillow>=10.0.0
+requests>=2.31.0
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.5.1+cpu
+torchvision==0.20.1+cpu
+ultralytics>=8.2.0
+onnxruntime>=1.18.0
+deep-translator>=1.11.4
+dghs-imgutils>=0.18.1
+pypdfium2>=4.30.0
