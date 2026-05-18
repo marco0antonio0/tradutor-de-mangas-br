@@ -2,6 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { db } from '@/lib/backend/shared/database.module'
 import { buildModelApiUrl, modelApiHeaders } from '@/lib/model-gateway'
+import { decryptSecret } from '@/lib/security/secrets'
 import type { ImageKind, ResolvedImageFile } from './sections.types'
 
 const sectionsRoot = path.resolve(process.cwd(), 'storage', 'sections')
@@ -57,6 +58,103 @@ async function translateBatchViaGoogle(texts: string[], sourceLang: string, targ
         if (i >= texts.length) return
         try {
           out[i] = await translateOneViaGoogle(texts[i], sourceLang, targetLang)
+        } catch {
+          out[i] = texts[i]
+        }
+      }
+    })
+  )
+  return out
+}
+
+function parseProvider(providerLang: string) {
+  const normalized = (providerLang || '').trim()
+  if (normalized.toLowerCase().startsWith('openrouter:')) {
+    const model = normalized.slice('openrouter:'.length).trim()
+    return { provider: 'openrouter' as const, model: model || 'google/gemma-4-31b-it' }
+  }
+  return { provider: 'google' as const, model: '' }
+}
+
+function getOpenRouterApiKeyFromDb() {
+  const row = db.prepare('SELECT value FROM kv_store WHERE key = ? LIMIT 1')
+    .get('manga:openrouter:api_key') as { value?: string } | undefined
+  const raw = row?.value ? String(row.value) : ''
+  if (!raw) return ''
+  const decrypted = decryptSecret(raw)
+  return (decrypted || raw || '').trim()
+}
+
+function parseOpenRouterMessageContent(content: unknown) {
+  if (typeof content === 'string') return content.trim()
+  if (Array.isArray(content)) {
+    const joined = content
+      .map((part) => {
+        if (!part || typeof part !== 'object') return ''
+        const rec = part as Record<string, unknown>
+        const text = rec.text
+        return typeof text === 'string' ? text : ''
+      })
+      .filter(Boolean)
+      .join('\n')
+    return joined.trim()
+  }
+  return ''
+}
+
+async function translateOneViaOpenRouter(
+  text: string,
+  sourceLang: string,
+  targetLang: string,
+  model: string,
+  apiKey: string
+) {
+  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    cache: 'no-store',
+    body: JSON.stringify({
+      model,
+      temperature: 0,
+      messages: [
+        {
+          role: 'system',
+          content: `Translate from ${sourceLang} to ${targetLang}. Return only the translated text.`,
+        },
+        { role: 'user', content: text },
+      ],
+    }),
+  })
+  if (!response.ok) throw new Error(`OpenRouter HTTP ${response.status}`)
+  const payload = await response.json() as {
+    choices?: Array<{ message?: { content?: unknown } }>
+  }
+  const content = parseOpenRouterMessageContent(payload?.choices?.[0]?.message?.content)
+  if (!content) throw new Error('Resposta de tradução OpenRouter inválida')
+  return content
+}
+
+async function translateBatchViaOpenRouter(
+  texts: string[],
+  sourceLang: string,
+  targetLang: string,
+  model: string,
+  apiKey: string
+) {
+  const out = new Array<string>(texts.length).fill('')
+  const concurrency = Math.max(1, Math.min(3, texts.length))
+  let cursor = 0
+  await Promise.all(
+    Array.from({ length: concurrency }, async () => {
+      while (true) {
+        const i = cursor++
+        if (i >= texts.length) return
+        try {
+          out[i] = await translateOneViaOpenRouter(texts[i], sourceLang, targetLang, model, apiKey)
         } catch {
           out[i] = texts[i]
         }
@@ -233,7 +331,7 @@ export class SectionsRepository {
     image: { id: number; order_index: number; original_path: string; mime: string },
     sourceLang: string,
     targetLang: string,
-    _providerLang: string
+    providerLang: string
   ) {
     const now = new Date().toISOString()
     db.prepare(`UPDATE section_images SET status = 'processing', translation_status = 'translating', updated_at = ? WHERE id = ?`)
@@ -279,11 +377,28 @@ export class SectionsRepository {
         if (text) textsToTranslate.push({ detIdx: idx, text })
       })
 
-      const translations = await translateBatchViaGoogle(
-        textsToTranslate.map((t) => t.text),
-        sourceLang,
-        targetLang
-      )
+      const provider = parseProvider(providerLang)
+      let translations: string[] = []
+
+      if (provider.provider === 'openrouter') {
+        const apiKey = getOpenRouterApiKeyFromDb()
+        if (!apiKey) {
+          throw new Error('OpenRouter selecionado, mas nenhuma API key válida foi encontrada.')
+        }
+        translations = await translateBatchViaOpenRouter(
+          textsToTranslate.map((t) => t.text),
+          sourceLang,
+          targetLang,
+          provider.model,
+          apiKey
+        )
+      } else {
+        translations = await translateBatchViaGoogle(
+          textsToTranslate.map((t) => t.text),
+          sourceLang,
+          targetLang
+        )
+      }
 
       const translatedByIdx = new Map<number, string>()
       textsToTranslate.forEach((entry, position) => {

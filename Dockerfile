@@ -9,6 +9,7 @@ RUN npm ci
 FROM node:20-bookworm-slim AS builder
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV SKIP_DB_BOOTSTRAP=1
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build

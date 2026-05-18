@@ -48,7 +48,8 @@ else
   echo "[dev] dependencias Python ja prontas; pulando pip install"
 fi
 
-export TRANSLATE_API_KEY="${TRANSLATE_API_KEY:-example-translate-api-key}"
+# Se vazio, a API Python roda sem exigir chave (uso local).
+export TRANSLATE_API_KEY="${TRANSLATE_API_KEY:-}"
 export YOLO_MODEL_PATH="${YOLO_MODEL_PATH:-$PY_DIR/models/yolo.onnx}"
 export OCR_DET_ONNX_PATH="${OCR_DET_ONNX_PATH:-$PY_DIR/models/paddleocr_det.onnx}"
 export OCR_REC_ONNX_PATH="${OCR_REC_ONNX_PATH:-$PY_DIR/models/paddleocr_rec.onnx}"

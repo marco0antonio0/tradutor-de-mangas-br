@@ -328,6 +328,8 @@ export function PreferencesHub() {
   const [selectedOpenRouterModel, setSelectedOpenRouterModel] = useState('')
   const [isSavingOpenRouterKey, setIsSavingOpenRouterKey] = useState(false)
   const [isSavingOpenRouterModel, setIsSavingOpenRouterModel] = useState(false)
+  const [isDeletingOpenRouterKey, setIsDeletingOpenRouterKey] = useState(false)
+  const [isDeleteOpenRouterDialogOpen, setIsDeleteOpenRouterDialogOpen] = useState(false)
 
   const [categories, setCategories] = useState<CategoryItem[]>([])
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null)
@@ -601,6 +603,33 @@ export function PreferencesHub() {
       toast.error(err instanceof Error ? err.message : 'Erro ao salvar modelo.')
     } finally {
       setIsSavingOpenRouterModel(false)
+    }
+  }
+
+  const handleDeleteOpenRouterKey = async () => {
+    if (isDeletingOpenRouterKey || !canRunAction('delete-openrouter-key')) return
+    if (!hasOpenRouterApiKey) {
+      toast.error('Não há API key salva para remover.')
+      return
+    }
+
+    setIsDeletingOpenRouterKey(true)
+    try {
+      const response = await fetch('/api/openrouter', { method: 'DELETE' })
+      const data = await response.json() as OpenRouterPayload
+      if (!response.ok) throw new Error(data.message || 'Não foi possível remover API key.')
+
+      setOpenRouterApiKey('')
+      setHasOpenRouterApiKey(false)
+      setIsOpenRouterValid(false)
+      setOpenRouterModels([])
+      setSelectedOpenRouterModel('')
+      setIsDeleteOpenRouterDialogOpen(false)
+      toast.success(data.message || 'API key removida com sucesso.')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erro ao remover API key.')
+    } finally {
+      setIsDeletingOpenRouterKey(false)
     }
   }
 
@@ -912,15 +941,27 @@ export function PreferencesHub() {
                 </p>
               </div>
 
-              <Button
-                type="button"
-                className="gap-2"
-                onClick={() => void handleSaveOpenRouterKey()}
-                disabled={isSavingOpenRouterKey}
-              >
-                {isSavingOpenRouterKey ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                {isSavingOpenRouterKey ? 'Validando...' : 'Salvar e validar chave'}
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  className="gap-2"
+                  onClick={() => void handleSaveOpenRouterKey()}
+                  disabled={isSavingOpenRouterKey || isDeletingOpenRouterKey}
+                >
+                  {isSavingOpenRouterKey ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                  {isSavingOpenRouterKey ? 'Validando...' : 'Salvar e validar chave'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  className="gap-2"
+                  onClick={() => setIsDeleteOpenRouterDialogOpen(true)}
+                  disabled={!hasOpenRouterApiKey || isDeletingOpenRouterKey || isSavingOpenRouterKey}
+                >
+                  {isDeletingOpenRouterKey ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                  {isDeletingOpenRouterKey ? 'Removendo...' : 'Remover chave'}
+                </Button>
+              </div>
 
               {isOpenRouterValid && openRouterModels.length > 0 ? (
                 <div className="space-y-3 rounded-lg border p-3">
@@ -952,6 +993,30 @@ export function PreferencesHub() {
                 </p>
               )}
             </Card>
+
+            <AlertDialog open={isDeleteOpenRouterDialogOpen} onOpenChange={setIsDeleteOpenRouterDialogOpen}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Remover API key do OpenRouter?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    A chave e o modelo selecionado serão removidos do sistema. Esta ação não pode ser desfeita.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={isDeletingOpenRouterKey}>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={(event) => {
+                      event.preventDefault()
+                      void handleDeleteOpenRouterKey()
+                    }}
+                    disabled={isDeletingOpenRouterKey}
+                    className="bg-destructive text-white hover:bg-destructive/90"
+                  >
+                    {isDeletingOpenRouterKey ? 'Removendo...' : 'Remover chave'}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </TabsContent>
         ) : null}
 

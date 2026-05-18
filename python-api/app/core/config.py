@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -46,8 +47,9 @@ class Settings:
     ocr_unclip_ratio: float = 2.0
     ocr_max_candidates: int = 1200
 
-    # API key padrão para ambiente local/open-source.
-    api_key: str = "example-translate-api-key"
+    # API key opcional.
+    # Vazio => autenticação desabilitada para uso local.
+    api_key: str = os.getenv("TRANSLATE_API_KEY", "").strip()
 
     enable_cors: bool = True
 

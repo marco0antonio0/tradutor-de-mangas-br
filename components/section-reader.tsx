@@ -144,6 +144,13 @@ interface SectionStatsResponse {
   avg_elapsed_ms_per_page?: unknown
   avg_elapsed_seconds_per_page?: unknown
   total_detections?: unknown
+  provider_lang?: unknown
+  cost_model?: unknown
+  estimated_input_tokens?: unknown
+  estimated_output_tokens?: unknown
+  estimated_input_cost_usd?: unknown
+  estimated_output_cost_usd?: unknown
+  estimated_total_cost_usd?: unknown
   generated_at?: unknown
   message?: unknown
   error?: unknown
@@ -214,7 +221,9 @@ interface OcrBatchTranslateResponse {
 }
 
 interface OcrImageQueueResponse {
+  job_key?: unknown
   job_id?: unknown
+  queue_key?: unknown
   status?: unknown
   queue_position?: unknown
   redis?: unknown
@@ -460,8 +469,19 @@ const OCR_OVERLAY_FONT_FAMILIES: Record<OcrOverlayFontFamily, { label: string; c
   },
 }
 
-function resolveOcrOverlayProvider(_value: string | null | undefined) {
-  return 'google'
+function resolveOcrOverlayProvider(value: string | null | undefined) {
+  const normalized = typeof value === 'string' ? value.trim() : ''
+  return normalized || 'google'
+}
+
+function formatProviderLabel(value: string | null | undefined) {
+  const provider = resolveOcrOverlayProvider(value)
+  if (provider.toLowerCase() === 'google') return 'Google Translate'
+  if (provider.toLowerCase().startsWith('openrouter:')) {
+    const model = provider.slice('openrouter:'.length).trim()
+    return model ? `OpenRouter (${model})` : 'OpenRouter'
+  }
+  return provider
 }
 
 function normalizeOverlaySelectionLanguage(
@@ -2244,6 +2264,13 @@ export function SectionReader({ sectionId }: SectionReaderProps) {
     totalElapsedMinutes: number
     avgElapsedSecondsPerPage: number
     totalDetections: number
+    providerLang: string | null
+    costModel: string | null
+    estimatedInputTokens: number
+    estimatedOutputTokens: number
+    estimatedInputCostUsd: number | null
+    estimatedOutputCostUsd: number | null
+    estimatedTotalCostUsd: number | null
     generatedAt: string | null
   } | null>(null)
   const [isDeletingCategory, setIsDeletingCategory] = useState(false)
@@ -2433,6 +2460,13 @@ export function SectionReader({ sectionId }: SectionReaderProps) {
         totalElapsedMinutes: Math.max(0, toFiniteNumber(data.total_elapsed_minutes) ?? 0),
         avgElapsedSecondsPerPage: Math.max(0, toFiniteNumber(data.avg_elapsed_seconds_per_page) ?? 0),
         totalDetections: Math.max(0, toFiniteNumber(data.total_detections) ?? 0),
+        providerLang: toStringValue(data.provider_lang),
+        costModel: toStringValue(data.cost_model),
+        estimatedInputTokens: Math.max(0, toFiniteNumber(data.estimated_input_tokens) ?? 0),
+        estimatedOutputTokens: Math.max(0, toFiniteNumber(data.estimated_output_tokens) ?? 0),
+        estimatedInputCostUsd: toFiniteNumber(data.estimated_input_cost_usd),
+        estimatedOutputCostUsd: toFiniteNumber(data.estimated_output_cost_usd),
+        estimatedTotalCostUsd: toFiniteNumber(data.estimated_total_cost_usd),
         generatedAt: typeof data.generated_at === 'string' ? data.generated_at : null,
       })
     } catch (err) {
@@ -2498,6 +2532,12 @@ export function SectionReader({ sectionId }: SectionReaderProps) {
     if (!isStatsExpanded) return
     void fetchSectionStats()
   }, [fetchSectionStats, isStatsExpanded])
+
+  useEffect(() => {
+    if (!section?.id) return
+    if (sectionStats) return
+    void fetchSectionStats()
+  }, [fetchSectionStats, section?.id, sectionStats])
 
   useEffect(() => {
     let cancelled = false
@@ -3999,8 +4039,11 @@ export function SectionReader({ sectionId }: SectionReaderProps) {
       }
 
       const queueRedisPayload = asObjectRecord(ocrQueueData.redis) ?? {}
-      const jobKey = toStringValue(queueRedisPayload.job_key)
+      const jobKey = toStringValue(ocrQueueData.job_id)
+        ?? toStringValue(queueRedisPayload.job_key)
+        ?? toStringValue((ocrQueueData as Record<string, unknown>).job_key)
       const queueKey = toStringValue(queueRedisPayload.queue_key)
+        ?? toStringValue((ocrQueueData as Record<string, unknown>).queue_key)
       if (!jobKey) {
         throw new Error('A fila OCR não retornou job_key para polling.')
       }
@@ -4733,7 +4776,7 @@ export function SectionReader({ sectionId }: SectionReaderProps) {
     }
     setQueueActionLoading('reprocess')
 
-    const providerLang = 'google'
+    const providerLang = resolveOcrOverlayProvider(section.provider_lang)
 
     try {
       const response = await fetch(
@@ -7156,9 +7199,17 @@ export function SectionReader({ sectionId }: SectionReaderProps) {
               {derivedProcessingCount > 0 && (
                 <Badge variant="outline">Processando {derivedProcessingCount}</Badge>
               )}
-              <Badge variant="outline">
-                Google Translate
-              </Badge>
+              <Badge variant="outline">{formatProviderLabel(section.provider_lang)}</Badge>
+              {sectionStats?.estimatedTotalCostUsd !== null && sectionStats?.estimatedTotalCostUsd !== undefined && (
+                <Badge variant="secondary">
+                  Custo est.: {sectionStats.estimatedTotalCostUsd.toLocaleString('en-US', {
+                    style: 'currency',
+                    currency: 'USD',
+                    minimumFractionDigits: 6,
+                    maximumFractionDigits: 6,
+                  })}
+                </Badge>
+              )}
               {queueState?.completed && (
                 <Badge variant="secondary">Concluída</Badge>
               )}
@@ -7316,6 +7367,30 @@ export function SectionReader({ sectionId }: SectionReaderProps) {
                       <span>OCR concluído: <span className="font-medium text-foreground">{sectionStats.ocrCompletedPages.toLocaleString('pt-BR')}</span></span>
                       <span>Páginas processadas: <span className="font-medium text-foreground">{sectionStats.completedPages.toLocaleString('pt-BR')}</span></span>
                       <span>Com tempo registrado: <span className="font-medium text-foreground">{sectionStats.pagesWithElapsedMs.toLocaleString('pt-BR')}</span></span>
+                      {sectionStats.estimatedTotalCostUsd !== null
+                        ? (
+                          <span>
+                            Custo estimado: <span className="font-medium text-foreground">
+                              {sectionStats.estimatedTotalCostUsd.toLocaleString('en-US', {
+                                style: 'currency',
+                                currency: 'USD',
+                                minimumFractionDigits: 6,
+                                maximumFractionDigits: 6,
+                              })}
+                            </span>
+                            {sectionStats.costModel ? ` (${sectionStats.costModel})` : ''}
+                          </span>
+                        )
+                        : null}
+                      {sectionStats.estimatedTotalCostUsd !== null
+                        ? (
+                          <span>
+                            Tokens (in/out): <span className="font-medium text-foreground">
+                              {sectionStats.estimatedInputTokens.toLocaleString('pt-BR')} / {sectionStats.estimatedOutputTokens.toLocaleString('pt-BR')}
+                            </span>
+                          </span>
+                        )
+                        : null}
                       {sectionStats.generatedAt
                         ? <span>Atualizado: <span className="font-medium text-foreground">{formatSectionDate(sectionStats.generatedAt)}</span></span>
                         : null}

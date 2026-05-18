@@ -52,6 +52,14 @@ export async function POST(request: Request) {
     const jobKey = `local:ocr-job:${jobId}`
     const queueKey = 'local:ocr-queue'
 
+    const normalizedStatus = (response.status === 401 || response.status === 403)
+      ? 502
+      : response.status
+
+    const normalizedErrorMessage = (response.status === 401 || response.status === 403)
+      ? 'Falha de autenticação entre Next.js e API Python. Verifique a configuração da chave interna.'
+      : String(payload?.detail || payload?.message || 'Falha no OCR.')
+
     const job = response.ok
       ? {
           job_id: jobId,
@@ -67,7 +75,7 @@ export async function POST(request: Request) {
       : {
           job_id: jobId,
           status: 'failed',
-          error_message: String(payload?.detail || payload?.message || 'Falha no OCR.'),
+          error_message: normalizedErrorMessage,
           created_at: new Date().toISOString(),
           queue_key: queueKey,
         }
@@ -80,8 +88,12 @@ export async function POST(request: Request) {
       status: job.status,
       queue_position: 0,
       queue_length: 1,
+      redis: {
+        job_key: jobKey,
+        queue_key: queueKey,
+      },
       job,
-    }, { status: response.ok ? 200 : response.status })
+    }, { status: response.ok ? 200 : normalizedStatus })
   } catch (error) {
     console.error('OCR queue route error:', error)
     return NextResponse.json({ message: 'Erro ao enfileirar OCR da área selecionada.' }, { status: 500 })

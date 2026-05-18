@@ -40,6 +40,10 @@ function setKv(key: string, value: string) {
   `).run(key, value)
 }
 
+function deleteKv(key: string) {
+  db.prepare('DELETE FROM kv_store WHERE key = ?').run(key)
+}
+
 async function validateOpenRouterApiKey(apiKey: string) {
   try {
     const response = await fetch('https://openrouter.ai/api/v1/models', {
@@ -69,7 +73,6 @@ async function validateOpenRouterApiKey(apiKey: string) {
 export async function GET() {
   const user = await requireUser()
   if (!user) return unauthorizedResponse()
-  if (user.role !== 4) return forbiddenResponse()
 
   const apiKey = getOpenRouterApiKey()
   const selectedModel = getKv(OPENROUTER_MODEL_KV)
@@ -193,5 +196,26 @@ export async function PATCH(request: Request) {
   return NextResponse.json({
     message: 'Modelo do OpenRouter atualizado.',
     selectedModel: model,
+  })
+}
+
+export async function DELETE(request: Request) {
+  if (isStateChangingMethod(request.method) && !isTrustedOrigin(request)) {
+    return NextResponse.json({ message: 'Origem não autorizada', error: 'Forbidden', statusCode: 403 }, { status: 403 })
+  }
+
+  const user = await requireUser()
+  if (!user) return unauthorizedResponse()
+  if (user.role !== 4) return forbiddenResponse()
+
+  deleteKv(OPENROUTER_KEY_KV)
+  deleteKv(OPENROUTER_MODEL_KV)
+
+  return NextResponse.json({
+    message: 'API key do OpenRouter removida com sucesso.',
+    hasApiKey: false,
+    isValid: false,
+    availableModels: [],
+    selectedModel: null,
   })
 }

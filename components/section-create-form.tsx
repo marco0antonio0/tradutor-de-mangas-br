@@ -66,6 +66,12 @@ interface SectionCategoryResponse {
   error?: string
 }
 
+interface OpenRouterStatusPayload {
+  isValid?: boolean
+  availableModels?: string[]
+  selectedModel?: string | null
+}
+
 type UploadMode = 'pdf' | 'pdf-batch' | 'images'
 
 const STATIC_LANGUAGES: LanguageOption[] = [
@@ -514,7 +520,8 @@ export function SectionCreateForm() {
   const [nameSuggestion, setNameSuggestion] = useState('')
   const [sourceLang, setSourceLang] = useState(DEFAULT_SOURCE_LANG)
   const [targetLang, setTargetLang] = useState(DEFAULT_TARGET_LANG)
-  const [providerLang, setProviderLang] = useState<'google'>('google')
+  const [providerLang, setProviderLang] = useState<'google' | 'openrouter'>('google')
+  const [openRouterModel, setOpenRouterModel] = useState('')
   const [uploadItems, setUploadItems] = useState<PreparedUploadItem[]>([])
   const [batchPdfStatusByItemId, setBatchPdfStatusByItemId] = useState<Record<string, BatchPdfUploadStatus>>({})
   const [isDragOver, setIsDragOver] = useState(false)
@@ -671,6 +678,34 @@ export function SectionCreateForm() {
 
     void fetchUserRole()
   }, [router])
+
+  useEffect(() => {
+    let cancelled = false
+    const loadOpenRouterStatus = async () => {
+      try {
+        const response = await fetch('/api/openrouter', { cache: 'no-store' })
+        const data = (await response.json()) as OpenRouterStatusPayload
+        if (cancelled || !response.ok) return
+
+        if (!data.isValid) return
+        const models = Array.isArray(data.availableModels) ? data.availableModels : []
+        if (models.length === 0) return
+
+        const selectedModel = typeof data.selectedModel === 'string' ? data.selectedModel : ''
+        const nextModel = selectedModel && models.includes(selectedModel)
+          ? selectedModel
+          : (models[0] || '')
+        if (!nextModel) return
+        setOpenRouterModel(nextModel)
+      } catch {
+        // OpenRouter opcional
+      }
+    }
+    void loadOpenRouterStatus()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     if (uploadMode === 'pdf-batch' && !canUsePdfBatch) {
@@ -1280,7 +1315,10 @@ export function SectionCreateForm() {
             formData.append('priority', priorityValue)
             formData.append('source_lang', effectiveSourceLang)
             formData.append('target_lang', effectiveTargetLang)
-            formData.append('provider_lang', providerLang)
+            const providerValue = providerLang === 'openrouter' && openRouterModel
+              ? `openrouter:${openRouterModel}`
+              : providerLang
+            formData.append('provider_lang', providerValue)
             imageFiles.forEach((file) => formData.append('files', file))
 
             const response = await fetch('/api/sections', {
@@ -1365,7 +1403,10 @@ export function SectionCreateForm() {
       formData.append('priority', priorityValue)
       formData.append('source_lang', effectiveSourceLang)
       formData.append('target_lang', effectiveTargetLang)
-      formData.append('provider_lang', providerLang)
+      const providerValue = providerLang === 'openrouter' && openRouterModel
+        ? `openrouter:${openRouterModel}`
+        : providerLang
+      formData.append('provider_lang', providerValue)
       filesToUpload.forEach((file) => formData.append('files', file))
 
       const response = await fetch('/api/sections', {
@@ -1867,7 +1908,7 @@ export function SectionCreateForm() {
                 </label>
                 <Select
                   value={providerLang}
-                  onValueChange={() => setProviderLang('google')}
+                  onValueChange={(value) => setProviderLang(value === 'openrouter' ? 'openrouter' : 'google')}
                   disabled={isCreatingSection || isPreparingUploads}
                 >
                   <SelectTrigger id="section-provider-lang" className="w-full h-12 text-sm">
@@ -1875,6 +1916,9 @@ export function SectionCreateForm() {
                   </SelectTrigger>
                   <SelectContent position="popper">
                     <SelectItem value="google">Google</SelectItem>
+                    {openRouterModel ? (
+                      <SelectItem value="openrouter">OpenRouter ({openRouterModel})</SelectItem>
+                    ) : null}
                   </SelectContent>
                 </Select>
 
