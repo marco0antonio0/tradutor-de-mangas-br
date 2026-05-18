@@ -1,4 +1,7 @@
-<h1 align="center">Manga Translator Web</h1>
+<p align="center">
+  <img alt="Ilustração do projeto" src="images/Gemini_Generated_Image_vfdkflvfdkflvfdk 1.png" width="260">
+</p>
+<h1 align="center">Manga Translator Local</h1>
 
 <p align="center">
   <strong>Plataforma local-first para tradução de mangás com Next.js + Python/FastAPI</strong>
@@ -17,6 +20,11 @@
   <img alt="SQLite" src="https://img.shields.io/badge/SQLite-local-003B57?logo=sqlite&logoColor=white">
   <img alt="Docker" src="https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white">
 </p>
+
+<p align="center">
+  <img alt="Ilustração do projeto" src="images/Group 19 (1).png" width="860">
+</p>
+
 
 ---
 
