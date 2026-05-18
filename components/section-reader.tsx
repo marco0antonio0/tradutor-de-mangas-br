@@ -2482,11 +2482,18 @@ export function SectionReader({ sectionId }: SectionReaderProps) {
   // Derivados a partir dos status individuais das imagens (processing_images_count e
   // queued_images_count NÃO chegam via WebSocket — só na rota de listagem)
   const derivedProcessingCount = useMemo(
-    () => (section?.images ?? []).filter((img) => img.translation_status === 'processing').length,
+    () => (
+      section?.images ?? []
+    ).filter((img) => img.selected_for_processing && img.translation_status === 'processing').length,
     [section?.images]
   )
   const derivedQueuedCount = useMemo(
-    () => (section?.images ?? []).filter((img) => img.translation_status === 'queued' || img.translation_status === 'pending').length,
+    () => (
+      section?.images ?? []
+    ).filter((img) => (
+      img.selected_for_processing
+      && (img.translation_status === 'queued' || img.translation_status === 'pending')
+    )).length,
     [section?.images]
   )
 
