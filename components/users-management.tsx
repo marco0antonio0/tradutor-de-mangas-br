@@ -3,7 +3,6 @@
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -29,10 +28,8 @@ import { toErrorMessage } from '@/lib/sections'
 import {
   AlertCircle,
   FileStack,
-  KeyRound,
   Loader2,
   RefreshCw,
-  Settings2,
   ShieldCheck,
   TrendingDown,
   TrendingUp,
@@ -60,15 +57,6 @@ interface AuthMeResponse {
 
 interface UpdatePasswordResponse {
   success?: boolean
-  message?: string
-  error?: string
-}
-
-interface UpdateUserLimitResponse {
-  id?: number
-  limite?: number
-  gerado?: number
-  limit_page_upload?: number
   message?: string
   error?: string
 }
@@ -108,17 +96,11 @@ export function UsersManagement() {
   const [isCheckingAccess, setIsCheckingAccess] = useState(true)
   const [isLoadingUsers, setIsLoadingUsers] = useState(true)
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false)
-  const [isUpdatingLimit, setIsUpdatingLimit] = useState(false)
-  const [limitActionType, setLimitActionType] = useState<'save' | 'reset' | null>(null)
 
   const [newPassword, setNewPassword] = useState('')
-  const [limitInput, setLimitInput] = useState('')
-  const [pageUploadLimitInput, setPageUploadLimitInput] = useState('')
 
   const [selectedUserForPassword, setSelectedUserForPassword] = useState<UserItem | null>(null)
-  const [selectedUserForLimit, setSelectedUserForLimit] = useState<UserItem | null>(null)
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false)
-  const [isLimitDialogOpen, setIsLimitDialogOpen] = useState(false)
 
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -212,23 +194,6 @@ export function UsersManagement() {
     setNewPassword('')
   }
 
-  const openLimitDialog = (user: UserItem) => {
-    setSelectedUserForLimit(user)
-    setLimitInput(String(user.limite))
-    setPageUploadLimitInput(String(user.limit_page_upload))
-    setIsLimitDialogOpen(true)
-    setError('')
-    setSuccess('')
-  }
-
-  const closeLimitDialog = () => {
-    if (isUpdatingLimit) return
-    setIsLimitDialogOpen(false)
-    setSelectedUserForLimit(null)
-    setLimitInput('')
-    setPageUploadLimitInput('')
-  }
-
   const handleUpdatePassword = async () => {
     if (!selectedUserForPassword) return
     if (!newPassword.trim()) { setError('Informe a nova senha.'); return }
@@ -254,88 +219,6 @@ export function UsersManagement() {
     }
   }
 
-  const handleSaveLimits = async () => {
-    if (!selectedUserForLimit) return
-    const parsedGenerationLimit = Number(limitInput)
-    if (!Number.isInteger(parsedGenerationLimit) || parsedGenerationLimit < 0) {
-      setError('Informe um limite inteiro maior ou igual a zero.')
-      return
-    }
-    const parsedPageLimit = Number(pageUploadLimitInput)
-    if (!Number.isInteger(parsedPageLimit) || parsedPageLimit < 0) {
-      setError('Informe um limite de páginas inteiro maior ou igual a zero.')
-      return
-    }
-    const shouldUpdateGenerationLimit = parsedGenerationLimit !== selectedUserForLimit.limite
-    const shouldUpdatePageLimit = parsedPageLimit !== selectedUserForLimit.limit_page_upload
-    if (!shouldUpdateGenerationLimit && !shouldUpdatePageLimit) {
-      setSuccess('Nenhuma alteração para salvar.')
-      return
-    }
-    setError('')
-    setSuccess('')
-    setIsUpdatingLimit(true)
-    setLimitActionType('save')
-    try {
-      const successMessages: string[] = []
-      if (shouldUpdateGenerationLimit) {
-        const response = await fetch(`/api/auth/users/${selectedUserForLimit.id}/limit`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ limite: parsedGenerationLimit }),
-        })
-        const data = (await response.json()) as UpdateUserLimitResponse
-        if (response.status === 401) { handleUnauthorized(); return }
-        if (response.status === 403) { router.replace('/inicio/secoes'); return }
-        if (!response.ok) throw new Error(toErrorMessage(data, 'Não foi possível atualizar o limite.'))
-        successMessages.push(data.message || 'Limite atualizado.')
-      }
-      if (shouldUpdatePageLimit) {
-        const response = await fetch(`/api/auth/users/${selectedUserForLimit.id}/limit-page-upload`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ limit_page_upload: parsedPageLimit }),
-        })
-        const data = (await response.json()) as UpdateUserLimitResponse
-        if (response.status === 401) { handleUnauthorized(); return }
-        if (response.status === 403) { router.replace('/inicio/secoes'); return }
-        if (!response.ok) throw new Error(toErrorMessage(data, 'Não foi possível atualizar o limite de páginas.'))
-        successMessages.push(data.message || 'Limite de páginas atualizado.')
-      }
-      setSuccess(successMessages.join(' '))
-      closeLimitDialog()
-      await fetchUsers()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao salvar limites.')
-    } finally {
-      setIsUpdatingLimit(false)
-      setLimitActionType(null)
-    }
-  }
-
-  const handleResetLimit = async () => {
-    if (!selectedUserForLimit) return
-    setError('')
-    setSuccess('')
-    setIsUpdatingLimit(true)
-    setLimitActionType('reset')
-    try {
-      const response = await fetch(`/api/auth/users/${selectedUserForLimit.id}/limit/reset`, { method: 'PATCH' })
-      const data = (await response.json()) as UpdateUserLimitResponse
-      if (response.status === 401) { handleUnauthorized(); return }
-      if (response.status === 403) { router.replace('/inicio/secoes'); return }
-      if (!response.ok) throw new Error(toErrorMessage(data, 'Não foi possível resetar o limite.'))
-      setSuccess(data.message || 'Limite resetado com sucesso.')
-      closeLimitDialog()
-      await fetchUsers()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao resetar limite.')
-    } finally {
-      setIsUpdatingLimit(false)
-      setLimitActionType(null)
-    }
-  }
-
   if (isCheckingAccess) {
     return (
       <Card className="p-8">
@@ -354,7 +237,7 @@ export function UsersManagement() {
           <div>
             <h1 className="text-xl sm:text-2xl font-semibold text-foreground">Usuários</h1>
             <p className="text-sm text-muted-foreground">
-              Gerencie contas, limites e senhas da plataforma.
+              Gerencie contas e senhas da plataforma.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -476,15 +359,6 @@ export function UsersManagement() {
                       <span className="ml-auto">Desde {formatUserDate(user.createdAt)}</span>
                     </div>
 
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="w-1/2 h-10 text-sm font-medium gap-2"
-                      onClick={() => openLimitDialog(user)}
-                    >
-                      <Settings2 className="h-4 w-4" />
-                      Limites
-                    </Button>
                   </div>
                 )
               })}
@@ -500,7 +374,6 @@ export function UsersManagement() {
                     <TableHead className="min-w-40">Uso mensal</TableHead>
                     <TableHead>Pág./proc.</TableHead>
                     <TableHead>Desde</TableHead>
-                    <TableHead className="text-right w-32">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -539,20 +412,6 @@ export function UsersManagement() {
                         <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
                           {formatUserDate(user.createdAt)}
                         </TableCell>
-                        <TableCell>
-                          <div className="flex items-center justify-end gap-1.5">
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              className="h-7 px-2"
-                              title="Gerenciar limites"
-                              onClick={() => openLimitDialog(user)}
-                            >
-                              <Settings2 className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
-                        </TableCell>
                       </TableRow>
                     )
                   })}
@@ -562,68 +421,6 @@ export function UsersManagement() {
           </>
         )}
       </Card>
-
-      <Dialog open={isLimitDialogOpen} onOpenChange={(open) => { if (!open) closeLimitDialog() }}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Limites do usuário</DialogTitle>
-            <DialogDescription>
-              {selectedUserForLimit
-                ? `${selectedUserForLimit.name} · Gerado: ${selectedUserForLimit.gerado}`
-                : 'Ajuste os limites do usuário.'}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-foreground">Limite de geração (janela)</label>
-              <Input
-                type="number"
-                min={0}
-                step={1}
-                value={limitInput}
-                onChange={(e) => setLimitInput(e.target.value)}
-                placeholder="Ex: 5"
-                disabled={isUpdatingLimit}
-                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void handleSaveLimits() } }}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-foreground">Limite de páginas por processamento</label>
-              <Input
-                type="number"
-                min={0}
-                step={1}
-                value={pageUploadLimitInput}
-                onChange={(e) => setPageUploadLimitInput(e.target.value)}
-                placeholder="Ex: 50"
-                disabled={isUpdatingLimit}
-                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void handleSaveLimits() } }}
-              />
-            </div>
-          </div>
-
-          <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button type="button" variant="outline" onClick={closeLimitDialog} disabled={isUpdatingLimit} className="sm:mr-auto">
-              Cancelar
-            </Button>
-            <Button type="button" variant="outline" onClick={() => void handleResetLimit()} disabled={isUpdatingLimit}>
-              {isUpdatingLimit && limitActionType === 'reset'
-                ? <><Loader2 className="h-4 w-4 animate-spin" />Resetando...</>
-                : 'Resetar'}
-            </Button>
-            <Button
-              type="button"
-              onClick={() => void handleSaveLimits()}
-              disabled={isUpdatingLimit || !limitInput.trim() || !pageUploadLimitInput.trim()}
-            >
-              {isUpdatingLimit && limitActionType === 'save'
-                ? <><Loader2 className="h-4 w-4 animate-spin" />Salvando...</>
-                : 'Salvar'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       <Dialog open={isPasswordDialogOpen} onOpenChange={(open) => { if (!open) closePasswordDialog() }}>
         <DialogContent className="max-w-sm">
