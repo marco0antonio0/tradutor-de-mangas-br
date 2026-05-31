@@ -87,8 +87,8 @@ export function TermsModal({ open, onAccept }: TermsModalProps) {
               <div>
                 <h2 className="text-xl font-bold text-foreground">Bem-vindo ao MangaIOTranslate!</h2>
                 <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
-                  Sua plataforma para traduzir mangás e manhwas com inteligência artificial,
-                  de forma rápida e simples.
+                  Projeto open source e gratuito para traduzir mangás, manhwas, manhuas e HQs
+                  com apoio de IA, de forma local.
                 </p>
               </div>
             </div>
@@ -97,24 +97,22 @@ export function TermsModal({ open, onAccept }: TermsModalProps) {
               <div className="flex items-start gap-3 rounded-lg bg-muted/30 px-3 py-2.5">
                 <Sparkles className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                 <p className="text-xs text-muted-foreground">
-                  Serviço comercial de tradução automática com IA para mangás, manhwas e HQs —
-                  mantendo o layout visual original.
+                  Ferramenta de tradução automática para leitura assistida, preservando a estrutura
+                  visual original das páginas processadas.
                 </p>
               </div>
               <div className="flex items-start gap-3 rounded-lg bg-muted/30 px-3 py-2.5">
                 <ScrollText className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                 <p className="text-xs text-muted-foreground">
-                  As traduções ficam <strong className="text-foreground">privadas e vinculadas à sua conta</strong>,
-                  com retenção técnica conforme os Termos. A plataforma não distribui nem compartilha
-                  publicamente obras de terceiros.
+                  Dados e traduções ficam <strong className="text-foreground">armazenados localmente na sua instância</strong>.
+                  O projeto não opera armazenamento central e não distribui conteúdo de terceiros.
                 </p>
               </div>
               <div className="flex items-start gap-3 rounded-lg bg-muted/30 px-3 py-2.5">
                 <Gift className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                 <p className="text-xs text-muted-foreground">
-                  O plano <strong className="text-foreground">gratuito</strong> permite uso até uma
-                  cota de páginas definida pela plataforma. Limites podem ser ampliados com planos
-                  pagos disponíveis na plataforma. Compras via PIX seguem política de reembolso descrita nos Termos.
+                  O MangaIOTranslate é <strong className="text-foreground">gratuito e sem planos pagos</strong>.
+                  Não há cobrança, créditos, mensalidades ou política de reembolso.
                 </p>
               </div>
               <div className="flex items-start gap-3 rounded-lg bg-amber-500/10 border border-amber-500/20 px-3 py-2.5">
@@ -122,8 +120,8 @@ export function TermsModal({ open, onAccept }: TermsModalProps) {
                 <p className="text-xs text-muted-foreground">
                   O usuário é <strong className="text-foreground">integralmente responsável</strong> pelo
                   conteúdo enviado. O processamento ocorre de forma automatizada, sem curadoria editorial
-                  humana. A plataforma não se responsabiliza por uso de material protegido sem autorização
-                  e atua em conformidade com a <strong className="text-foreground">LGPD</strong>.
+                  humana. O projeto não se responsabiliza por uso de material protegido sem autorização
+                  e observa a <strong className="text-foreground">LGPD</strong> no contexto de execução local.
                 </p>
               </div>
             </div>
