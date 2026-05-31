@@ -1,10 +1,15 @@
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
+import { z } from 'zod'
 import { getUserFromToken } from '@/lib/local-backend/auth'
 import { deleteSection, getSectionDetail } from '@/lib/local-backend/sections'
+import { parseParams } from '@/app/api/_shared/validation'
 
 const AUTH_TOKEN_COOKIE = 'manga-access-token'
 type RouteParams = { params: Promise<{ id: string }> }
+const sectionParamsSchema = z.object({
+  id: z.coerce.number().int().positive('ID inválido'),
+})
 
 function unauthorized() {
   return NextResponse.json(
@@ -19,11 +24,9 @@ export async function GET(_: Request, { params }: RouteParams) {
   const user = getUserFromToken(token)
   if (!user) return unauthorized()
 
-  const { id } = await params
-  const sectionId = Number.parseInt(id, 10)
-  if (!Number.isFinite(sectionId)) {
-    return NextResponse.json({ message: 'ID inválido', error: 'Bad Request', statusCode: 400 }, { status: 400 })
-  }
+  const parsedParams = parseParams(await params, sectionParamsSchema)
+  if (!parsedParams.success) return parsedParams.response
+  const sectionId = parsedParams.data.id
 
   const section = getSectionDetail(sectionId, user.id)
   if (!section) {
@@ -39,11 +42,9 @@ export async function DELETE(_: Request, { params }: RouteParams) {
   const user = getUserFromToken(token)
   if (!user) return unauthorized()
 
-  const { id } = await params
-  const sectionId = Number.parseInt(id, 10)
-  if (!Number.isFinite(sectionId)) {
-    return NextResponse.json({ message: 'ID inválido', error: 'Bad Request', statusCode: 400 }, { status: 400 })
-  }
+  const parsedParams = parseParams(await params, sectionParamsSchema)
+  if (!parsedParams.success) return parsedParams.response
+  const sectionId = parsedParams.data.id
 
   const ok = deleteSection(sectionId, user.id)
   if (!ok) {

@@ -1,9 +1,15 @@
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
+import { z } from 'zod'
 import { getUserFromToken } from '@/lib/local-backend/auth'
 import { createSectionFromFormData, listSections } from '@/lib/local-backend/sections'
+import { validationErrorResponse } from '@/app/api/_shared/validation'
 
 const AUTH_TOKEN_COOKIE = 'manga-access-token'
+const sectionsQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  per_page: z.coerce.number().int().min(1).max(100).default(12),
+})
 
 function unauthorized() {
   return NextResponse.json(
@@ -19,8 +25,13 @@ export async function GET(request: Request) {
   if (!user) return unauthorized()
 
   const { searchParams } = new URL(request.url)
-  const page = Math.max(1, Number.parseInt(searchParams.get('page') || '1', 10) || 1)
-  const perPage = Math.max(1, Math.min(100, Number.parseInt(searchParams.get('per_page') || '12', 10) || 12))
+  const parsedQuery = sectionsQuerySchema.safeParse({
+    page: searchParams.get('page') ?? undefined,
+    per_page: searchParams.get('per_page') ?? undefined,
+  })
+  if (!parsedQuery.success) return validationErrorResponse(parsedQuery.error)
+  const page = parsedQuery.data.page
+  const perPage = parsedQuery.data.per_page
 
   const allSections = listSections(user.id)
   const total = allSections.length

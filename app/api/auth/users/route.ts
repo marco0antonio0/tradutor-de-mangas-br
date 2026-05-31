@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
+import { z } from 'zod'
 import { requireUser, unauthorizedResponse } from '@/app/api/_shared/proxy'
+import { parseJsonBody } from '@/app/api/_shared/validation'
 import bcrypt from 'bcryptjs'
 import { db } from '@/lib/backend/shared/database.module'
 import { isStateChangingMethod, isTrustedOrigin } from '@/lib/security/request-guards'
@@ -10,6 +12,13 @@ function forbiddenResponse() {
     { status: 403 }
   )
 }
+
+const createUserBodySchema = z.object({
+  name: z.string().trim().min(1, 'Nome é obrigatório'),
+  email: z.string().trim().email('Email inválido').transform((v) => v.toLowerCase()),
+  password: z.string().min(6, 'Senha deve ter pelo menos 6 caracteres'),
+  role: z.coerce.number().int().min(0).max(4).default(0),
+})
 
 export async function GET() {
   const user = await requireUser()
@@ -58,32 +67,9 @@ export async function POST(request: Request) {
   if (!user) return unauthorizedResponse()
   if (user.role !== 4) return forbiddenResponse()
 
-  let payload: unknown = {}
-  try {
-    payload = await request.json()
-  } catch {
-    payload = {}
-  }
-
-  const body = payload && typeof payload === 'object' ? payload as Record<string, unknown> : {}
-  const name = typeof body.name === 'string' ? body.name.trim() : ''
-  const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : ''
-  const password = typeof body.password === 'string' ? body.password : ''
-  const roleRaw = typeof body.role === 'number' ? body.role : Number(body.role)
-  const role = Number.isFinite(roleRaw) ? Math.max(0, Math.min(4, Math.floor(roleRaw))) : 0
-
-  if (!name || !email || !password) {
-    return NextResponse.json(
-      { message: 'Nome, email e senha são obrigatórios', error: 'Bad Request', statusCode: 400 },
-      { status: 400 }
-    )
-  }
-  if (password.length < 6) {
-    return NextResponse.json(
-      { message: 'Senha deve ter pelo menos 6 caracteres', error: 'Bad Request', statusCode: 400 },
-      { status: 400 }
-    )
-  }
+  const parsedBody = await parseJsonBody(request, createUserBodySchema)
+  if (!parsedBody.success) return parsedBody.response
+  const { name, email, password, role } = parsedBody.data
 
   const existing = db.prepare('SELECT id FROM users WHERE lower(email) = lower(?)').get(email) as { id?: number } | undefined
   if (existing?.id) {

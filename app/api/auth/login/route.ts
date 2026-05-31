@@ -1,10 +1,16 @@
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
+import { z } from 'zod'
 import { authController } from '@/lib/backend/auth/auth.module'
 import { consumeRateLimit } from '@/lib/security/rate-limit'
 import { isStateChangingMethod, isTrustedOrigin } from '@/lib/security/request-guards'
+import { parseJsonBody } from '@/app/api/_shared/validation'
 
 const AUTH_TOKEN_COOKIE = 'manga-access-token'
+const loginBodySchema = z.object({
+  email: z.string().trim().email('Email inválido'),
+  password: z.string().min(1, 'Senha é obrigatória'),
+})
 
 function shouldUseSecureCookie(request: Request) {
   const forwardedProto = request.headers.get('x-forwarded-proto')?.split(',')[0]?.trim()
@@ -26,9 +32,9 @@ export async function POST(request: Request) {
     const clientIp = request.headers.get('x-real-ip')
       || request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
       || 'local'
-    const body = await request.json() as { email?: string; password?: string }
-    const email = String(body.email ?? '').trim()
-    const password = String(body.password ?? '')
+    const parsedBody = await parseJsonBody(request, loginBodySchema)
+    if (!parsedBody.success) return parsedBody.response
+    const { email, password } = parsedBody.data
 
     const ipLimiter = consumeRateLimit('auth-login-ip', clientIp, 20, 5 * 60 * 1000)
     if (!ipLimiter.allowed) {
@@ -44,10 +50,6 @@ export async function POST(request: Request) {
         { error: 'Muitas tentativas para este usuário. Aguarde alguns minutos.' },
         { status: 429, headers: { 'Retry-After': String(emailLimiter.retryAfterSec) } }
       )
-    }
-
-    if (!email || !password) {
-      return NextResponse.json({ error: 'Email e senha são obrigatórios' }, { status: 400 })
     }
 
     if (!authController.hasAnyUser()) {
