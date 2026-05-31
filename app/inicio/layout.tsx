@@ -20,7 +20,6 @@ import {
   FolderOpen,
   Info,
   ListOrdered,
-  MessageSquare,
   Users,
   PlayCircle,
   Settings2,
@@ -72,13 +71,6 @@ const navItems: NavItem[] = [
     icon: ListOrdered,
     role4Only: true,
     isActive: (pathname) => pathname === '/inicio/fila-global',
-  },
-  {
-    href: '/inicio/feedbacks',
-    label: 'Feedbacks',
-    icon: MessageSquare,
-    role4Only: true,
-    isActive: (pathname) => pathname === '/inicio/feedbacks',
   },
 ]
 

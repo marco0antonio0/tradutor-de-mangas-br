@@ -77,8 +77,6 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { SpotlightTour, checkTourDone, type TourStep } from '@/components/spotlight-tour'
-import { FeedbackModal } from '@/components/feedback-modal'
-import { ReportModal } from '@/components/report-modal'
 
 interface SectionReaderProps {
   sectionId: number
@@ -2217,7 +2215,6 @@ export function SectionReader({ sectionId }: SectionReaderProps) {
   const [readPages, setReadPages] = useState<Set<number>>(new Set())
   const [readingMode, setReadingMode] = useState(false)
   const [readingViewMode, setReadingViewMode] = useState<'paginated' | 'scroll'>('paginated')
-  const [feedbackOpen, setFeedbackOpen] = useState(false)
   const [suggestedSections, setSuggestedSections] = useState<SectionListItem[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
   const suggestionsScrollRef = useRef<HTMLDivElement | null>(null)
@@ -2228,7 +2225,6 @@ export function SectionReader({ sectionId }: SectionReaderProps) {
   const [sectionGridVisibleCount, setSectionGridVisibleCount] = useState(SECTION_GRID_INITIAL_PAGES)
   const [revealedScrollImageIds, setRevealedScrollImageIds] = useState<Set<number>>(new Set())
   const scrollImageObserverRef = useRef<IntersectionObserver | null>(null)
-  const [reportOpen, setReportOpen] = useState(false)
   const [isOverlayFontPopoverOpen, setIsOverlayFontPopoverOpen] = useState(false)
   const [currentReadingPage, setCurrentReadingPage] = useState(0)
   const [zoom, setZoom] = useState(100)
@@ -2331,7 +2327,6 @@ export function SectionReader({ sectionId }: SectionReaderProps) {
   const autoQueueAttemptedRef = useRef(false)
   const autoReprocessAttemptedRef = useRef(false)
   const autoReprocessAcceptedRef = useRef(false)
-  const autoFailureReportedRef = useRef(false)
 
   const handleUnauthorized = useCallback(() => {
     const params = new URLSearchParams()
@@ -4676,45 +4671,7 @@ export function SectionReader({ sectionId }: SectionReaderProps) {
     autoQueueAttemptedRef.current = false
     autoReprocessAttemptedRef.current = false
     autoReprocessAcceptedRef.current = false
-    autoFailureReportedRef.current = false
   }, [sectionId])
-
-  const sendAutomaticFailureReport = useCallback(async (message: string) => {
-    if (!section || autoFailureReportedRef.current) return
-
-    autoFailureReportedRef.current = true
-    const failedEntries = section.images
-      .filter((image) => {
-        const translationStatus = normalizeStatus(image.translation_status)
-        return FAILED_TRANSLATION_STATUSES.has(translationStatus) || Boolean(image.translation_error)
-      })
-      .slice(0, 4)
-      .map((image) => {
-        const base = `img#${image.id} page=${image.order_index + 1} status=${String(image.translation_status || '').trim() || 'unknown'}`
-        const err = String(image.translation_error || '').trim()
-        return err ? `${base} err=${err}` : base
-      })
-
-    const comment = [
-      '[Auto report] Falha persistente de processamento/reprocessamento ao acessar seção.',
-      message,
-      failedEntries.length > 0 ? `Falhas: ${failedEntries.join(' | ')}` : 'Falhas: sem detalhes.',
-    ].join(' ')
-
-    try {
-      await fetch(`/api/sections/${section.id}/feedback`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          stars: 1,
-          comment,
-        }),
-      })
-      toast.error('Falha persistente detectada. Report automático enviado.')
-    } catch {
-      autoFailureReportedRef.current = false
-    }
-  }, [section])
 
   const handleQueueSection = useCallback(async (options?: QueueActionOptions): Promise<boolean> => {
     if (!section) return false
@@ -4814,13 +4771,8 @@ export function SectionReader({ sectionId }: SectionReaderProps) {
             autoReprocessAcceptedRef.current = true
             return
           }
-          await sendAutomaticFailureReport('Falha ao iniciar reprocessamento automático.')
         })()
         return
-      }
-
-      if (autoReprocessAcceptedRef.current && !autoFailureReportedRef.current) {
-        void sendAutomaticFailureReport('Mesmo após reprocessamento automático, a seção segue com erro.')
       }
       return
     }
@@ -4839,7 +4791,6 @@ export function SectionReader({ sectionId }: SectionReaderProps) {
     queueState?.inQueueOrProcessing,
     isAutoProcessingEnabled,
     section,
-    sendAutomaticFailureReport,
   ])
 
   const handleUpdatePublicAccess = async (enabled: boolean, regenerateKey = false) => {
@@ -6827,15 +6778,6 @@ export function SectionReader({ sectionId }: SectionReaderProps) {
           </div>
         )}
 
-        <FeedbackModal
-          open={feedbackOpen}
-          sectionId={sectionId}
-          onClose={() => setFeedbackOpen(false)}
-          onSubmitted={() => {
-            setFeedbackOpen(false)
-            closeReadingMode()
-          }}
-        />
       </div>
     )
   }
@@ -7277,14 +7219,6 @@ export function SectionReader({ sectionId }: SectionReaderProps) {
                     : <BarChart3 className="h-3.5 w-3.5" />}
                   {isStatsExpanded ? 'Ocultar estatísticas' : 'Estatísticas'}
                 </Button>
-                <button
-                  type="button"
-                  onClick={() => setReportOpen(true)}
-                  className="shrink-0 flex items-center gap-1 text-xs text-muted-foreground/60 hover:text-destructive transition-colors"
-                >
-                  <AlertTriangle className="h-3 w-3" />
-                  Reportar problema
-                </button>
               </div>
             </div>
 
@@ -7391,12 +7325,6 @@ export function SectionReader({ sectionId }: SectionReaderProps) {
               </div>
             )}
           </Card>
-
-          <ReportModal
-            open={reportOpen}
-            sectionId={sectionId}
-            onClose={() => setReportOpen(false)}
-          />
 
           {userRole === 4 && (
           <Card className="overflow-hidden">
