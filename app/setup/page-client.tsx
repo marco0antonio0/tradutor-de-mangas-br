@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { FormEvent, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Loader2,
@@ -54,6 +54,11 @@ export default function SetupPageClient() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    void handleCreateAdmin()
   }
 
   return (
@@ -152,7 +157,7 @@ export default function SetupPageClient() {
               </div>
             ) : null}
 
-            <div className="mt-5 space-y-3">
+            <form className="mt-5 space-y-3" onSubmit={handleSubmit}>
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">Nome</label>
                 <Input
@@ -182,17 +187,12 @@ export default function SetupPageClient() {
                   disabled={isLoading}
                 />
               </div>
-            </div>
 
-            <Button
-              className="mt-6 w-full"
-              size="lg"
-              onClick={() => void handleCreateAdmin()}
-              disabled={isLoading}
-            >
-              {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              {isLoading ? 'Criando administrador...' : 'Criar administrador e continuar'}
-            </Button>
+              <Button className="mt-6 w-full" size="lg" type="submit" disabled={isLoading}>
+                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {isLoading ? 'Criando administrador...' : 'Criar administrador e continuar'}
+              </Button>
+            </form>
 
             <p className="mt-4 text-center text-xs text-muted-foreground">
               Ao continuar, você concorda em manter estes dados apenas neste ambiente local.
