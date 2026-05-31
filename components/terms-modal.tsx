@@ -20,6 +20,7 @@ import {
   ShieldAlert,
   Sparkles,
 } from 'lucide-react'
+import { LEGAL_MODAL_CONTENT } from '@/lib/legal-content'
 
 const TERMS_KEY = 'manga-terms-v2'
 
@@ -85,10 +86,9 @@ export function TermsModal({ open, onAccept }: TermsModalProps) {
                 <Languages className="h-10 w-10 text-primary" />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-foreground">Bem-vindo ao MangaIOTranslate!</h2>
+                <h2 className="text-xl font-bold text-foreground">{LEGAL_MODAL_CONTENT.title}</h2>
                 <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
-                  Projeto open source e gratuito para traduzir mangás, manhwas, manhuas e HQs
-                  com apoio de IA, de forma local.
+                  {LEGAL_MODAL_CONTENT.subtitle}
                 </p>
               </div>
             </div>
@@ -97,31 +97,25 @@ export function TermsModal({ open, onAccept }: TermsModalProps) {
               <div className="flex items-start gap-3 rounded-lg bg-muted/30 px-3 py-2.5">
                 <Sparkles className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                 <p className="text-xs text-muted-foreground">
-                  Ferramenta de tradução automática para leitura assistida, preservando a estrutura
-                  visual original das páginas processadas.
+                  {LEGAL_MODAL_CONTENT.cards[0].text}
                 </p>
               </div>
               <div className="flex items-start gap-3 rounded-lg bg-muted/30 px-3 py-2.5">
                 <ScrollText className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                 <p className="text-xs text-muted-foreground">
-                  Dados e traduções ficam <strong className="text-foreground">armazenados localmente na sua instância</strong>.
-                  O projeto não opera armazenamento central e não distribui conteúdo de terceiros.
+                  {LEGAL_MODAL_CONTENT.cards[1].text}
                 </p>
               </div>
               <div className="flex items-start gap-3 rounded-lg bg-muted/30 px-3 py-2.5">
                 <Gift className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                 <p className="text-xs text-muted-foreground">
-                  O MangaIOTranslate é <strong className="text-foreground">gratuito e sem planos pagos</strong>.
-                  Não há cobrança, créditos, mensalidades ou política de reembolso.
+                  {LEGAL_MODAL_CONTENT.cards[2].text}
                 </p>
               </div>
               <div className="flex items-start gap-3 rounded-lg bg-amber-500/10 border border-amber-500/20 px-3 py-2.5">
                 <ShieldAlert className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
                 <p className="text-xs text-muted-foreground">
-                  O usuário é <strong className="text-foreground">integralmente responsável</strong> pelo
-                  conteúdo enviado. O processamento ocorre de forma automatizada, sem curadoria editorial
-                  humana. O projeto não se responsabiliza por uso de material protegido sem autorização
-                  e observa a <strong className="text-foreground">LGPD</strong> no contexto de execução local.
+                  {LEGAL_MODAL_CONTENT.cards[3].text}
                 </p>
               </div>
             </div>
@@ -158,14 +152,14 @@ export function TermsModal({ open, onAccept }: TermsModalProps) {
               className={`mt-0.5 shrink-0 ${attempted && !checked ? 'border-destructive' : ''}`}
             />
             <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors leading-relaxed">
-              Estou ciente que o uso desta plataforma é de minha responsabilidade e aceito os{' '}
+              {LEGAL_MODAL_CONTENT.acceptancePrefix}{' '}
               <Link
                 href="/termos"
                 target="_blank"
                 className="underline text-primary hover:text-primary/80 inline-flex items-center gap-0.5"
                 onClick={(e) => e.stopPropagation()}
               >
-                Termos de Uso
+                {LEGAL_MODAL_CONTENT.acceptanceLinkLabel}
                 <ExternalLink className="h-3 w-3" />
               </Link>.
             </span>
@@ -173,7 +167,7 @@ export function TermsModal({ open, onAccept }: TermsModalProps) {
 
           {attempted && !checked && (
             <p className="text-xs text-destructive px-2 -mt-1">
-              Aceite os termos para entrar na plataforma.
+              {LEGAL_MODAL_CONTENT.acceptanceError}
             </p>
           )}
 
