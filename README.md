@@ -117,6 +117,12 @@ docker compose down
 - Chaves sensíveis (OpenRouter) criptografadas em repouso
 - Setup inicial bloqueado para acesso não-local
 
+## Manutenção legal
+
+- Fonte única dos textos legais: [`lib/legal-content.ts`](lib/legal-content.ts)
+- A página [`/termos`](app/termos/page.tsx) e o modal de aceite (`components/terms-modal.tsx`) devem consumir esse módulo.
+- Para alterar termos, privacidade, data de atualização ou textos de aceite, edite apenas `lib/legal-content.ts`.
+
 Importante:
 - não commitar `storage/`
 - não commitar `.env*` com credenciais reais
